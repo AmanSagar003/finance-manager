@@ -3,6 +3,7 @@ package com.financemanager.config
 import jakarta.servlet.FilterChain
 import jakarta.servlet.http.HttpServletRequest
 import jakarta.servlet.http.HttpServletResponse
+import org.springframework.context.annotation.Lazy
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken
 import org.springframework.security.core.context.SecurityContextHolder
 import org.springframework.security.core.userdetails.UserDetailsService
@@ -13,7 +14,7 @@ import org.springframework.web.filter.OncePerRequestFilter
 @Component
 class JwtAuthFilter(
     private val jwtUtil: JwtUtil,
-    private val userDetailsService: UserDetailsService
+    @Lazy private val userDetailsService: UserDetailsService
 ) : OncePerRequestFilter() {
 
     override fun doFilterInternal(
@@ -29,10 +30,13 @@ class JwtAuthFilter(
         }
 
         val token = authHeader.substring(7)
+
         try {
             val username = jwtUtil.extractUsername(token)
+
             if (SecurityContextHolder.getContext().authentication == null) {
                 val userDetails = userDetailsService.loadUserByUsername(username)
+
                 if (jwtUtil.isTokenValid(token, userDetails)) {
                     val authToken = UsernamePasswordAuthenticationToken(
                         userDetails, null, userDetails.authorities
@@ -42,7 +46,7 @@ class JwtAuthFilter(
                 }
             }
         } catch (e: Exception) {
-            // Invalid token – continue without setting auth
+            // ignore invalid token
         }
 
         filterChain.doFilter(request, response)
